@@ -5,6 +5,8 @@ from tensorflow.keras.models import load_model
 from tensorflow.keras.applications.mobilenet_v2 import preprocess_input
 from tensorflow.keras.preprocessing.image import img_to_array
 from tensorflow.keras.applications import MobileNetV2
+import os
+import sys
 
 app = Flask(__name__)
 
@@ -12,7 +14,33 @@ app = Flask(__name__)
 # Load Pretrained Models
 # ------------------------------
 feature_extractor = MobileNetV2(weights="imagenet", include_top=False, pooling='avg')
-autoencoder = load_model("models/autoencoder.h5")  # trained model path
+
+# Check if model file exists before loading
+model_path = "models/autoencoder.h5"
+if not os.path.exists(model_path):
+    print(f"ERROR: Model file not found at '{model_path}'")
+    print("\nPlease train the model first by running:")
+    print("  python train_model.py")
+    print("\nThis will create the required model file.")
+    sys.exit(1)
+
+if not os.path.exists("models"):
+    print("ERROR: 'models' directory not found. Creating it...")
+    os.makedirs("models")
+    print(f"ERROR: Model file not found at '{model_path}'")
+    print("\nPlease train the model first by running:")
+    print("  python train_model.py")
+    sys.exit(1)
+
+try:
+    autoencoder = load_model(model_path)  # trained model path
+except Exception as e:
+    print(f"ERROR: Failed to load model from '{model_path}'")
+    print(f"Error details: {str(e)}")
+    print("\nThe model file may be corrupted. Please retrain by running:")
+    print("  python train_model.py")
+    sys.exit(1)
+
 threshold = 0.02  # set after testing reconstruction error distribution
 
 # ------------------------------
