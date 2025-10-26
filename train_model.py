@@ -7,6 +7,7 @@ from keras.layers import Input, Conv2D, MaxPooling2D, UpSampling2D, BatchNormali
 from keras.callbacks import ModelCheckpoint, EarlyStopping
 from keras.preprocessing.image import ImageDataGenerator
 import glob
+from sklearn.model_selection import train_test_split
 
 # Create models directory if it doesn't exist
 if not os.path.exists('models'):
@@ -143,27 +144,31 @@ def main():
         verbose=1
     )
     
-    # Data augmentation
+    # Split into train / validation explicitly (shuffle to avoid class distribution issues)
+    print("\n[3/4] Splitting data into train/validation sets...")
+    X_train, X_val = train_test_split(X_train, test_size=VALIDATION_SPLIT, shuffle=True, random_state=42)
+    print(f"Train samples: {len(X_train)}, Validation samples: {len(X_val)}")
+    
+    # Data augmentation (no validation_split here)
     datagen = ImageDataGenerator(
         rotation_range=10,
         width_shift_range=0.1,
         height_shift_range=0.1,
-        horizontal_flip=True,
-        validation_split=VALIDATION_SPLIT
+        horizontal_flip=True
     )
     
     # Train model
-    print(f"\n[3/4] Training model for {EPOCHS} epochs...")
+    print(f"\n[4/4] Training model for {EPOCHS} epochs...")
     history = autoencoder.fit(
-        datagen.flow(X_train, X_train, batch_size=BATCH_SIZE, subset='training'),
-        validation_data=datagen.flow(X_train, X_train, batch_size=BATCH_SIZE, subset='validation'),
+        datagen.flow(X_train, X_train, batch_size=BATCH_SIZE),
+        validation_data=(X_val, X_val),
         epochs=EPOCHS,
         callbacks=[checkpoint, early_stopping],
         verbose=1
     )
     
     # Save final model
-    print("\n[4/4] Saving final model...")
+    print("\n[5/5] Saving final model...")
     autoencoder.save('models/autoencoder.h5')
     print(f"Model saved to 'models/autoencoder.h5'")
     
