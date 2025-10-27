@@ -60,12 +60,26 @@ def generate_frames():
         img = np.expand_dims(img, axis=0)
         img = preprocess_input(img)
 
-        # Feature extraction
-        features = feature_extractor.predict(img)
-        reconstructed = autoencoder.predict(features)
+        # Prepare the frame for the autoencoder (must match training input shape)
+        # Resize to (224,224), convert BGR->RGB, normalize to [0,1], add batch dim
+        frame_resized = cv2.resize(frame, (224, 224))
+        frame_rgb = cv2.cvtColor(frame_resized, cv2.COLOR_BGR2RGB)
+        input_img = frame_rgb.astype('float32') / 255.0
+        input_batch = np.expand_dims(input_img, axis=0)  # shape: (1, 224, 224, 3)
 
-        # Compute reconstruction error
-        error = np.mean(np.square(features - reconstructed))
+        try:
+            reconstructed_batch = autoencoder.predict(input_batch)
+        except Exception as e:
+            # Log and skip this frame to avoid breaking the streamed response
+            print(f"Autoencoder predict error — skipping frame: {e}")
+            continue
+
+        # Remove batch dimension and convert back to BGR uint8 for display/comparison
+        reconstructed = np.squeeze(reconstructed_batch, axis=0)
+        reconstructed_bgr = cv2.cvtColor((reconstructed * 255).astype('uint8'), cv2.COLOR_RGB2BGR)
+
+        # Compute difference / anomaly map if needed using the resized frame
+        diff = cv2.absdiff(frame_resized, reconstructed_bgr)
 
         # Display result
         label = "Normal"
