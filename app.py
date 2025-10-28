@@ -78,6 +78,14 @@ def generate_frames():
         reconstructed = np.squeeze(reconstructed_batch, axis=0)
         reconstructed_bgr = cv2.cvtColor((reconstructed * 255).astype('uint8'), cv2.COLOR_RGB2BGR)
 
+        # Compute reconstruction error (MSE) between the normalized input and reconstructed output
+        # both input_img and reconstructed are in [0,1] float32
+        try:
+            error = float(np.mean((input_img - reconstructed) ** 2))
+        except Exception as e:
+            print(f"Error computing reconstruction error — skipping frame: {e}")
+            continue
+
         # Compute difference / anomaly map if needed using the resized frame
         diff = cv2.absdiff(frame_resized, reconstructed_bgr)
 
